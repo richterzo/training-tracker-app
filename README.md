@@ -19,7 +19,8 @@ A comprehensive calisthenics training tracking application built with Next.js an
 3. **Set up database:**
    - Go to Supabase Dashboard → SQL Editor
    - Run this **single script**: `scripts/setup-database.sql`
-   - This script creates everything: tables, indexes, functions, and RLS policies
+   - Then run: `scripts/fix-profile-fields.sql` (adds profile fields and avatar storage)
+   - These scripts create everything: tables, indexes, functions, and RLS policies
 
 4. **Start development server:**
    ```bash
