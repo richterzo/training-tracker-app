@@ -31,6 +31,10 @@ export interface Database {
           display_name: string | null
           group_id: string | null
           role: "admin" | "member"
+          weight_kg: number | null
+          height_cm: number | null
+          date_of_birth: string | null
+          bio: string | null
           created_at: string
           updated_at: string
         }
@@ -41,6 +45,10 @@ export interface Database {
           display_name?: string | null
           group_id?: string | null
           role?: "admin" | "member"
+          weight_kg?: number | null
+          height_cm?: number | null
+          date_of_birth?: string | null
+          bio?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -51,8 +59,62 @@ export interface Database {
           display_name?: string | null
           group_id?: string | null
           role?: "admin" | "member"
+          weight_kg?: number | null
+          height_cm?: number | null
+          date_of_birth?: string | null
+          bio?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      body_measurements: {
+        Row: {
+          id: string
+          user_id: string
+          recorded_at: string
+          weight_kg: number | null
+          body_fat_percentage: number | null
+          chest_cm: number | null
+          waist_cm: number | null
+          hips_cm: number | null
+          bicep_left_cm: number | null
+          bicep_right_cm: number | null
+          thigh_left_cm: number | null
+          thigh_right_cm: number | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          recorded_at: string
+          weight_kg?: number | null
+          body_fat_percentage?: number | null
+          chest_cm?: number | null
+          waist_cm?: number | null
+          hips_cm?: number | null
+          bicep_left_cm?: number | null
+          bicep_right_cm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          recorded_at?: string
+          weight_kg?: number | null
+          body_fat_percentage?: number | null
+          chest_cm?: number | null
+          waist_cm?: number | null
+          hips_cm?: number | null
+          bicep_left_cm?: number | null
+          bicep_right_cm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
+          notes?: string | null
+          created_at?: string
         }
       }
       exercises: {
@@ -64,6 +126,9 @@ export interface Database {
           description: string | null
           video_url: string | null
           created_by: string | null
+          progression_group: number | null
+          progression_level: number | null
+          exercise_code: string | null
           created_at: string
           updated_at: string
         }
@@ -75,6 +140,9 @@ export interface Database {
           description?: string | null
           video_url?: string | null
           created_by?: string | null
+          progression_group?: number | null
+          progression_level?: number | null
+          exercise_code?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -86,6 +154,9 @@ export interface Database {
           description?: string | null
           video_url?: string | null
           created_by?: string | null
+          progression_group?: number | null
+          progression_level?: number | null
+          exercise_code?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -117,6 +188,47 @@ export interface Database {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      template_exercises: {
+        Row: {
+          id: string
+          template_id: string
+          exercise_id: string
+          order_index: number
+          sets: number | null
+          reps: number | null
+          duration_seconds: number | null
+          rest_seconds: number | null
+          notes: string | null
+          progression_range: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          exercise_id: string
+          order_index: number
+          sets?: number | null
+          reps?: number | null
+          duration_seconds?: number | null
+          rest_seconds?: number | null
+          notes?: string | null
+          progression_range?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          exercise_id?: string
+          order_index?: number
+          sets?: number | null
+          reps?: number | null
+          duration_seconds?: number | null
+          rest_seconds?: number | null
+          notes?: string | null
+          progression_range?: string | null
+          created_at?: string
         }
       }
       planned_workouts: {
@@ -217,6 +329,56 @@ export interface Database {
           started_at?: string
           completed_at?: string | null
           duration_seconds?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+      }
+      body_measurements: {
+        Row: {
+          id: string
+          user_id: string
+          recorded_at: string
+          weight_kg: number | null
+          body_fat_percentage: number | null
+          chest_cm: number | null
+          waist_cm: number | null
+          hips_cm: number | null
+          bicep_left_cm: number | null
+          bicep_right_cm: number | null
+          thigh_left_cm: number | null
+          thigh_right_cm: number | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          recorded_at: string
+          weight_kg?: number | null
+          body_fat_percentage?: number | null
+          chest_cm?: number | null
+          waist_cm?: number | null
+          hips_cm?: number | null
+          bicep_left_cm?: number | null
+          bicep_right_cm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          recorded_at?: string
+          weight_kg?: number | null
+          body_fat_percentage?: number | null
+          chest_cm?: number | null
+          waist_cm?: number | null
+          hips_cm?: number | null
+          bicep_left_cm?: number | null
+          bicep_right_cm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
           notes?: string | null
           created_at?: string
         }

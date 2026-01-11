@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Calendar, Dumbbell, History, Settings, TrendingUp } from "lucide-react"
+import { Calendar, Dumbbell, History, Settings, TrendingUp, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -10,7 +10,7 @@ const navItems = [
   { href: "/app/exercises", icon: Dumbbell, label: "Exercises" },
   { href: "/app/history", icon: History, label: "History" },
   { href: "/app/stats", icon: TrendingUp, label: "Stats" },
-  { href: "/app/settings", icon: Settings, label: "Settings" },
+  { href: "/app/profile", icon: User, label: "Profile" },
 ]
 
 export function BottomNav() {
