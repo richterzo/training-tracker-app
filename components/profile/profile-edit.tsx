@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, Save, AlertCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { AvatarUpload } from "./avatar-upload"
 import type { Database } from "@/lib/types/database"
 
 type UserProfile = Database["public"]["Tables"]["user_profiles"]["Row"]
@@ -30,8 +31,9 @@ export function ProfileEdit({ profile }: ProfileEditProps) {
     weight_kg: profile.weight_kg ? String(profile.weight_kg) : "",
     height_cm: profile.height_cm ? String(profile.height_cm) : "",
     date_of_birth: profile.date_of_birth || "",
-    bio: profile.bio || "",
+    bio: (profile as any).bio || "",
   })
+  const [avatarUrl, setAvatarUrl] = useState((profile as any).avatar_url || null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +50,7 @@ export function ProfileEdit({ profile }: ProfileEditProps) {
       height_cm: formData.height_cm ? Number.parseInt(formData.height_cm) : null,
       date_of_birth: formData.date_of_birth || null,
       bio: formData.bio || null,
+      avatar_url: avatarUrl,
       updated_at: new Date().toISOString(),
     }
 
@@ -80,6 +83,8 @@ export function ProfileEdit({ profile }: ProfileEditProps) {
     }
   }
 
+  const displayName = formData.display_name || formData.full_name || profile.email
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
@@ -90,7 +95,13 @@ export function ProfileEdit({ profile }: ProfileEditProps) {
           </CardTitle>
           <CardDescription>Update your profile details</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <AvatarUpload
+            currentAvatarUrl={avatarUrl}
+            userId={profile.id}
+            userName={displayName}
+            onAvatarUpdated={(url) => setAvatarUrl(url)}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="display_name">Display Name</Label>
