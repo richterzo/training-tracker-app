@@ -82,41 +82,42 @@ export function CalisthenicsPresets({ groupId, userId, onTemplateCreated }: Cali
       if (exercisesError) throw exercisesError
 
       // Create template exercises with progression notes
+      // Ensure we have at least one exercise to use as fallback
+      if (!exercises || exercises.length === 0) {
+        throw new Error("No exercises found in your group. Please create exercises first.")
+      }
+
       const templateExercises = preset.exercises
         .map((presetEx, idx) => {
-          // Find matching exercise by category (or create placeholder)
-          const matchingExercise = exercises?.find(
+          // Find matching exercise by category
+          const matchingExercise = exercises.find(
             (ex) => ex.category.toLowerCase() === presetEx.category.toLowerCase()
           )
 
-          if (!matchingExercise) {
-            // If no matching exercise, we'll create a note-only entry
-            return {
-              template_id: template.id,
-              exercise_id: exercises?.[0]?.id || "", // Fallback to first exercise
-              order_index: idx,
-              sets: 3,
-              reps: null,
-              duration_seconds: null,
-              rest_seconds: 60,
-              notes: `${presetEx.category.toUpperCase()} - Group ${presetEx.group}, Level ${presetEx.level}: ${presetEx.note}`,
-              progression_range: `${presetEx.group}.${presetEx.level}`,
-            }
+          // Use matching exercise or fallback to first exercise of same category, or first available
+          const exerciseToUse = matchingExercise || exercises.find(
+            (ex) => ex.category.toLowerCase() === presetEx.category.toLowerCase()
+          ) || exercises[0]
+
+          if (!exerciseToUse) {
+            return null
           }
 
           return {
             template_id: template.id,
-            exercise_id: matchingExercise.id,
+            exercise_id: exerciseToUse.id,
             order_index: idx,
             sets: 3,
             reps: null,
             duration_seconds: null,
             rest_seconds: 60,
-            notes: `Group ${presetEx.group}, Level ${presetEx.level}: ${presetEx.note}`,
+            notes: matchingExercise
+              ? `Group ${presetEx.group}, Level ${presetEx.level}: ${presetEx.note}`
+              : `${presetEx.category.toUpperCase()} - Group ${presetEx.group}, Level ${presetEx.level}: ${presetEx.note}`,
             progression_range: `${presetEx.group}.${presetEx.level}`,
           }
         })
-        .filter((ex) => ex.exercise_id) // Only include if we have an exercise
+        .filter((ex): ex is NonNullable<typeof ex> => ex !== null && !!ex.exercise_id) // Only include valid exercises
 
       if (templateExercises.length > 0) {
         const { error: insertError } = await supabase.from("template_exercises").insert(templateExercises)
