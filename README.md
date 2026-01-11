@@ -5,12 +5,14 @@ A comprehensive calisthenics training tracking application built with Next.js an
 ## 🚀 Quick Start
 
 1. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 2. **Set up environment variables:**
    Create `.env.local` with your Supabase credentials:
+
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key

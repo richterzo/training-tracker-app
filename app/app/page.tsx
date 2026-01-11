@@ -29,8 +29,11 @@ export default async function AppHomePage() {
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const startDateStr = startOfMonth.toISOString().split("T")[0]
+  const endDateStr = endOfMonth.toISOString().split("T")[0]
 
-  const { data: workouts } = await supabase
+  // Get workouts created by user
+  const { data: userWorkouts } = await supabase
     .from("planned_workouts")
     .select(
       `
@@ -41,9 +44,48 @@ export default async function AppHomePage() {
       )
     `
     )
+    .eq("group_id", profile.group_id)
     .eq("user_id", user.id)
-    .gte("scheduled_date", startOfMonth.toISOString().split("T")[0])
-    .lte("scheduled_date", endOfMonth.toISOString().split("T")[0])
+    .gte("scheduled_date", startDateStr)
+    .lte("scheduled_date", endDateStr)
+
+  // Get group workouts where user is a participant
+  const { data: participantRecords } = await supabase
+    .from("workout_participants")
+    .select("planned_workout_id")
+    .eq("user_id", user.id)
+    .in("status", ["invited", "confirmed"])
+
+  const participantWorkoutIds =
+    participantRecords?.map((p) => p.planned_workout_id).filter((id): id is string => !!id) || []
+
+  // Get the actual workouts for participants
+  const { data: participantWorkouts } =
+    participantWorkoutIds.length > 0
+      ? await supabase
+          .from("planned_workouts")
+          .select(
+            `
+            *,
+            planned_workout_exercises(
+              *,
+              exercises(*)
+            )
+          `
+          )
+          .eq("group_id", profile.group_id)
+          .eq("is_group_workout", true)
+          .in("id", participantWorkoutIds)
+          .gte("scheduled_date", startDateStr)
+          .lte("scheduled_date", endDateStr)
+      : { data: null }
+
+  // Combine and deduplicate workouts
+  const userWorkoutIds = new Set((userWorkouts || []).map((w) => w.id))
+  const participantWorkoutList =
+    participantWorkouts?.filter((w) => !userWorkoutIds.has(w.id)) || []
+
+  const workouts = [...(userWorkouts || []), ...participantWorkoutList]
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4 pb-24">
