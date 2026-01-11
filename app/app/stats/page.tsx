@@ -88,11 +88,84 @@ export default async function StatsPage() {
     .select("id, name, category")
     .eq("group_id", profile.group_id)
 
+  // Get group members for group stats
+  const { data: groupMembers } = await supabase
+    .from("user_profiles")
+    .select("id, display_name, full_name, email")
+    .eq("group_id", profile.group_id)
+
+  // Get all group workouts for group stats
+  const { data: groupWeeklyWorkouts } = await supabase
+    .from("completed_workouts")
+    .select(
+      `
+      *,
+      completed_sets(
+        *,
+        exercises(*)
+      ),
+      user_profiles(
+        id,
+        display_name,
+        full_name,
+        email
+      )
+    `
+    )
+    .eq("group_id", profile.group_id)
+    .gte("completed_at", startOfWeek.toISOString())
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+
+  const { data: groupMonthlyWorkouts } = await supabase
+    .from("completed_workouts")
+    .select(
+      `
+      *,
+      completed_sets(
+        *,
+        exercises(*)
+      ),
+      user_profiles(
+        id,
+        display_name,
+        full_name,
+        email
+      )
+    `
+    )
+    .eq("group_id", profile.group_id)
+    .gte("completed_at", startOfMonth.toISOString())
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+
+  const { data: groupYearlyWorkouts } = await supabase
+    .from("completed_workouts")
+    .select(
+      `
+      *,
+      completed_sets(
+        *,
+        exercises(*)
+      ),
+      user_profiles(
+        id,
+        display_name,
+        full_name,
+        email
+      )
+    `
+    )
+    .eq("group_id", profile.group_id)
+    .gte("completed_at", startOfYear.toISOString())
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-4 pb-24">
       <div>
         <h1 className="text-3xl font-bold">Statistics</h1>
-        <p className="text-muted-foreground">Your training progress and analytics</p>
+        <p className="text-muted-foreground">Your training progress and group analytics</p>
       </div>
 
       <StatsView
@@ -101,6 +174,11 @@ export default async function StatsPage() {
         yearlyWorkouts={yearlyWorkouts || []}
         exercises={allExercises || []}
         userId={user.id}
+        groupMembers={groupMembers || []}
+        groupWeeklyWorkouts={groupWeeklyWorkouts || []}
+        groupMonthlyWorkouts={groupMonthlyWorkouts || []}
+        groupYearlyWorkouts={groupYearlyWorkouts || []}
+        groupId={profile.group_id}
       />
     </div>
   )
