@@ -538,6 +538,7 @@ async function processVideosFolder(folderPath) {
           console.warn(`   💡 Gli esercizi verranno creati quando i gruppi li aggiungeranno\n`)
         }
       }
+    }
     }))
     
     console.log(`\n📊 Progresso: ${Math.min(i + BATCH_SIZE, exerciseEntries.length)} / ${exerciseEntries.length} esercizi processati\n`)
