@@ -44,8 +44,9 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= rea
     RELATIVE_PATH="${video#${SOURCE_DIR}/}"
     OUTPUT_PATH="$OUTPUT_DIR/$RELATIVE_PATH"
     
-    # Salta se già compresso
-    if [ -f "$OUTPUT_PATH" ]; then
+    # Salta se già compresso e valido
+    if [ -f "$OUTPUT_PATH" ] && [ -s "$OUTPUT_PATH" ]; then
+        COUNT=$((COUNT + 1))
         continue
     fi
     
