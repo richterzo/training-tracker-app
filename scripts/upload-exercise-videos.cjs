@@ -130,8 +130,18 @@ async function uploadVideo(filePath, exerciseName, groupId) {
   const storagePath = `exercise-videos/${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
   
   try {
+    const fileStats = fs.statSync(filePath)
+    const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2)
+    const MAX_SIZE_MB = 50 // Supabase Storage limit
+    
+    // Check file size
+    if (fileStats.size > MAX_SIZE_MB * 1024 * 1024) {
+      console.warn(`   ⚠️  File troppo grande (${fileSizeMB} MB > ${MAX_SIZE_MB} MB): ${fileName}`)
+      console.warn(`   💡 Considera di comprimere il video o usare un servizio esterno`)
+      return null
+    }
+    
     const fileBuffer = fs.readFileSync(filePath)
-    const fileSizeMB = (fileBuffer.length / (1024 * 1024)).toFixed(2)
     
     // Upload to storage
     const { data, error } = await supabase.storage
@@ -151,6 +161,7 @@ async function uploadVideo(filePath, exerciseName, groupId) {
       .from('exercise-videos')
       .getPublicUrl(storagePath)
     
+    console.log(`   ✅ Caricato (${fileSizeMB} MB)`)
     return publicUrl
   } catch (err) {
     console.error(`   ❌ Errore processando ${fileName}:`, err.message)
