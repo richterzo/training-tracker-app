@@ -318,13 +318,17 @@ function exerciseNameToSlug(name) {
     .replace(/^-|-$/g, '')
 }
 
-async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo = true) {
-  const fileName = path.basename(filePath)
-  const fileExt = path.extname(fileName)
+async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo = true, customFileName = null) {
+  const fileExt = path.extname(filePath)
   
-  // Rinomina il video con il nome dell'esercizio per migliore organizzazione
-  let safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-  if (renameVideo && exerciseName) {
+  // Se è stato fornito un nome file personalizzato (rinominato), usalo
+  let safeFileName
+  if (customFileName) {
+    safeFileName = customFileName
+  } else {
+    const fileName = path.basename(filePath)
+    safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
+    if (renameVideo && exerciseName) {
     // Crea nome file standardizzato: exercise-slug-variation.m4v
     const exerciseSlug = exerciseNameToSlug(exerciseName)
     
@@ -346,6 +350,7 @@ async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo =
     safeFileName = `${exerciseSlug}-${variation}${fileExt}`
     // Rimuovi doppi trattini e normalizza
     safeFileName = safeFileName.replace(/-+/g, '-').replace(/^-|-$/g, '')
+    }
   }
   
   // Path: shared/ per video tutorial condivisi, group_id/ per esercizi personalizzati
@@ -447,9 +452,10 @@ async function processVideosFolder(folderPath) {
   console.log(`📹 Trovati ${allVideoFiles.length} file video\n`)
   
   // Prima passata: trova tutti gli esercizi e raggruppa i video
+  // Migliorato: rinomina i file per matching perfetto
   for (const filePath of allVideoFiles) {
     const fileName = path.basename(filePath, path.extname(filePath))
-    const exerciseName = findExerciseFromFolder(filePath)
+    const exerciseName = findExerciseFromFolderImproved(filePath) || findExerciseFromFolder(filePath)
     
     if (exerciseName) {
       if (!exerciseVideos.has(exerciseName)) {
@@ -457,12 +463,46 @@ async function processVideosFolder(folderPath) {
       }
       
       // Determina se è il video principale (es. "1.2 regular" o "2.2 regular" sono i principali)
-      const isMain = /(regular|2\.|2\s)/i.test(fileName) && !/(incline|decline|slow|pause|negative)/i.test(fileName)
+      const isMain = /(regular|2\.|2\s|^1\.|^2\.)/i.test(fileName) && !/(incline|decline|slow|pause|negative|variation|advanced)/i.test(fileName)
+      
+      // Rinomina il file per matching perfetto
+      const exerciseSlug = exerciseNameToSlug(exerciseName)
+      const fileExt = path.extname(filePath)
+      const originalFileName = path.basename(filePath)
+      
+      // Crea nuovo nome file standardizzato
+      let newFileName = originalFileName
+      if (isMain) {
+        // Video principale: exercise-name-main.m4v
+        newFileName = `${exerciseSlug}-main${fileExt}`
+      } else {
+        // Video variante: estrai variante dal nome originale
+        let variation = fileName
+          .replace(/^\d+\.\d*\s*/, '') // Rimuovi "1.2 "
+          .replace(/^\d+\.\s*/, '') // Rimuovi "1. "
+          .replace(/\.[^.]+$/, '') // Rimuovi estensione
+          .replace(/[^a-zA-Z0-9\s-]/g, ' ') // Normalizza
+          .replace(/\s+/g, '-') // Spazi -> trattini
+          .toLowerCase()
+          .substring(0, 30) // Limita lunghezza
+        
+        if (!variation || variation.length < 3) {
+          variation = `variation-${Date.now() % 1000}`
+        }
+        
+        newFileName = `${exerciseSlug}-${variation}${fileExt}`
+        newFileName = newFileName.replace(/-+/g, '-').replace(/^-|-$/g, '')
+      }
+      
+      // Crea path temporaneo con nome rinominato (non modifica file originale)
+      const renamedPath = path.join(path.dirname(filePath), newFileName)
       
       exerciseVideos.get(exerciseName).push({
         filePath,
-        fileName: path.basename(filePath),
-        isMain
+        fileName: newFileName, // Usa nome rinominato
+        originalFileName,
+        isMain,
+        renamedPath // Path con nome rinominato per upload
       })
     } else {
       console.warn(`⚠️  Nessun esercizio trovato per: ${path.basename(filePath)}`)
@@ -493,16 +533,17 @@ async function processVideosFolder(folderPath) {
     
     let mainVideoUrl = null
     
-    // Carica tutti i video in parallelo (più veloce!)
-    console.log(`   📤 Caricando ${videos.length} video in parallelo...`)
-    const uploadPromises = videos.map(async (video) => {
-      const publicUrl = await uploadVideo(video.filePath, exerciseName, null) // null = path condiviso
-      if (publicUrl) {
-        console.log(`   ✅ Caricato: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''}`)
-        return { publicUrl, isMain: video.isMain }
-      }
-      return null
-    })
+      // Carica tutti i video in parallelo (più veloce!)
+      console.log(`   📤 Caricando ${videos.length} video in parallelo...`)
+      const uploadPromises = videos.map(async (video) => {
+        // Usa il nome file rinominato per upload (matching perfetto)
+        const publicUrl = await uploadVideo(video.filePath, exerciseName, null, false, video.fileName) // Passa nome file rinominato
+        if (publicUrl) {
+          console.log(`   ✅ Caricato: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''} (da: ${video.originalFileName})`)
+          return { publicUrl, isMain: video.isMain }
+        }
+        return null
+      })
     
     const uploadResults = await Promise.all(uploadPromises)
     
