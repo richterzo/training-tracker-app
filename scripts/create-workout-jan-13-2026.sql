@@ -77,7 +77,7 @@ BEGIN
     name,
     scheduled_date,
     is_group_workout,
-    location_name,
+    location,
     notes,
     created_at
   )
