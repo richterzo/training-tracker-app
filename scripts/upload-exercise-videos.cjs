@@ -309,6 +309,53 @@ function findExerciseFromFileName(fileName) {
   return null
 }
 
+// Migliorato: matching più intelligente con pattern regex
+function findExerciseFromFolderImproved(videoFilePath) {
+  const normalizedPath = videoFilePath.toLowerCase()
+  const fileName = path.basename(videoFilePath, path.extname(videoFilePath)).toLowerCase()
+  const fullPath = normalizedPath + ' ' + fileName
+  
+  // Pattern più specifici per matching
+  const patterns = [
+    // Push-ups patterns
+    { pattern: /(regular|standard|basic).*push.*up/i, exercise: 'Push-ups' },
+    { pattern: /pike.*push.*up/i, exercise: 'Pike Push-ups' },
+    { pattern: /wide.*push.*up/i, exercise: 'Wide Push-ups' },
+    { pattern: /diamond.*push.*up/i, exercise: 'Diamond Push-ups' },
+    { pattern: /triceps.*extension.*push.*up/i, exercise: 'Triceps Extension Push-ups' },
+    { pattern: /typewriter.*push/i, exercise: 'Typewriter Push-ups' },
+    
+    // Pull-ups patterns
+    { pattern: /(australian|incline|decline).*pull.*up/i, exercise: 'Australian Pull-ups' },
+    { pattern: /(wide|overhand).*pull.*up/i, exercise: 'Pull-ups' },
+    { pattern: /(chin|close|underhand).*pull.*up/i, exercise: 'Chin-ups' },
+    { pattern: /negative.*pull.*up/i, exercise: 'Negative Pull-ups' },
+    { pattern: /l[- ]?sit.*pull.*up/i, exercise: 'L-sit Pull-ups' },
+    { pattern: /typewriter.*pull/i, exercise: 'Typewriter Pull-ups' },
+    { pattern: /lever.*rise/i, exercise: 'Lever Rises' },
+    
+    // Core patterns
+    { pattern: /crunch/i, exercise: 'Crunches' },
+    { pattern: /leg.*raise|legs.*rise|knees/i, exercise: 'Leg Raises' },
+    { pattern: /side.*plank/i, exercise: 'Side Plank' },
+    { pattern: /^plank$/i, exercise: 'Plank' },
+    { pattern: /hollow.*(hold|body)/i, exercise: 'Hollow Body Hold' },
+    { pattern: /wiper/i, exercise: 'Wipers' },
+    
+    // Dips
+    { pattern: /dip/i, exercise: 'Dips' },
+  ]
+  
+  // Cerca nel path completo
+  for (const { pattern, exercise } of patterns) {
+    if (pattern.test(fullPath)) {
+      return exercise
+    }
+  }
+  
+  return null
+}
+
 // Converte nome esercizio in slug (stesso formato delle cartelle storage)
 function exerciseNameToSlug(name) {
   return name.toLowerCase()
