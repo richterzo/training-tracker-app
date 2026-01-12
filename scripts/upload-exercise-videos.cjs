@@ -261,12 +261,15 @@ function findExerciseFromFolder(videoFilePath) {
   return null
 }
 
-async function uploadVideo(filePath, exerciseName, groupId) {
+async function uploadVideo(filePath, exerciseName, groupId = null) {
   const fileName = path.basename(filePath)
   const fileExt = path.extname(fileName)
   const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-  // Path corretto: groupId/exercise-name/video.m4v (dentro il bucket exercise-videos)
-  const storagePath = `${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
+  // Path corretto: exercise-name/video.m4v (senza group_id, esercizi trasversali)
+  // Se groupId è null, usa path globale per esercizi condivisi
+  const storagePath = groupId 
+    ? `${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
+    : `shared/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
   
   try {
     const fileStats = fs.statSync(filePath)
@@ -316,12 +319,11 @@ async function processVideosFolder(folderPath) {
   
   console.log(`📁 Processando cartella: ${folderPath}\n`)
   
-  // Get group_id from first user
+  // Get all groups (i video tutorial sono condivisi per tutti i gruppi)
   const { data: profiles, error: profileError } = await supabase
     .from('user_profiles')
     .select('group_id')
     .not('group_id', 'is', null)
-    .limit(1)
   
   if (profileError) {
     console.error('❌ Errore nel recupero profili:', profileError.message)
@@ -335,8 +337,11 @@ async function processVideosFolder(folderPath) {
     return
   }
   
-  const groupId = profiles[0].group_id
-  console.log(`📋 Usando group_id: ${groupId}\n`)
+  // Get unique group IDs
+  const groupIds = [...new Set(profiles.map(p => p.group_id).filter(Boolean))]
+  console.log(`📋 Trovati ${groupIds.length} gruppi\n`)
+  console.log('💡 I 99 video tutorial sono CONdivisi per tutti i gruppi')
+  console.log('   Ogni gruppo può anche caricare i propri esercizi personalizzati\n')
   
   // Raggruppa i video per esercizio
   const exerciseVideos = new Map() // exerciseName -> [{filePath, fileName, isMain}]
@@ -395,10 +400,10 @@ async function processVideosFolder(folderPath) {
     
     let mainVideoUrl = null
     
-    // Carica tutti i video
+    // Carica tutti i video (una volta sola, senza group_id - esercizi trasversali)
     for (const video of videos) {
       console.log(`   📤 Caricando: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''}...`)
-      const publicUrl = await uploadVideo(video.filePath, exerciseName, groupId)
+      const publicUrl = await uploadVideo(video.filePath, exerciseName, null) // null = path condiviso
       
       if (publicUrl) {
         if (video.isMain || !mainVideoUrl) {
@@ -408,19 +413,30 @@ async function processVideosFolder(folderPath) {
       }
     }
     
-    // Aggiorna il campo video_url con il video principale
+    // Aggiorna il campo video_url con il video principale per TUTTI i gruppi
+    // I video tutorial sono condivisi: stesso video per tutti gli esercizi con lo stesso nome
+    // OTTIMIZZATO: una singola query invece di loop per gruppo
     if (mainVideoUrl) {
-      const { error: updateError } = await supabase
+      // Aggiorna tutti gli esercizi con questo nome in tutti i gruppi in una singola query
+      const { data: updated, error: updateError, count } = await supabase
         .from('exercises')
         .update({ video_url: mainVideoUrl })
-        .eq('group_id', groupId)
         .eq('name', exerciseName)
+        .in('group_id', groupIds)
+        .select('id', { count: 'exact' })
       
       if (updateError) {
-        console.error(`   ❌ Errore aggiornamento video_url per ${exerciseName}:`, updateError.message)
+        console.error(`   ❌ Errore aggiornamento:`, updateError.message)
       } else {
-        console.log(`   ✅ Aggiornato video_url principale per "${exerciseName}"`)
-        console.log(`   🔗 Link: ${mainVideoUrl}\n`)
+        const updatedCount = count || (updated ? updated.length : 0)
+        if (updatedCount > 0) {
+          console.log(`   ✅ Aggiornato video_url per "${exerciseName}"`)
+          console.log(`   📊 ${updatedCount} esercizi aggiornati in tutti i gruppi`)
+          console.log(`   🔗 Link condiviso: ${mainVideoUrl}\n`)
+        } else {
+          console.warn(`   ⚠️  Nessun esercizio "${exerciseName}" trovato nei gruppi`)
+          console.warn(`   💡 Gli esercizi verranno creati quando i gruppi li aggiungeranno\n`)
+        }
       }
     }
   }
