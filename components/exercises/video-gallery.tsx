@@ -13,8 +13,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Play, Search, Video as VideoIcon } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Play, Search, Video as VideoIcon, Link2, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import type { Database } from "@/lib/types/database"
+
+type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
 
 interface VideoFile {
   path: string
@@ -22,13 +33,22 @@ interface VideoFile {
   folder: string
   url: string
   exerciseName?: string
+  exerciseId?: string
 }
 
-export function VideoGallery() {
+interface VideoGalleryProps {
+  exercises?: Exercise[]
+}
+
+export function VideoGallery({ exercises: initialExercises }: VideoGalleryProps) {
   const [videos, setVideos] = useState<VideoFile[]>([])
+  const [exercises, setExercises] = useState<Exercise[]>(initialExercises || [])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedVideo, setSelectedVideo] = useState<VideoFile | null>(null)
+  const [associatingVideo, setAssociatingVideo] = useState<string | null>(null)
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string>("")
+  const { toast } = useToast()
 
   useEffect(() => {
     async function fetchVideos() {
@@ -81,24 +101,37 @@ export function VideoGallery() {
 
         await listVideosRecursive()
         
+        // Se non abbiamo gli esercizi, recuperali
+        if (!initialExercises || initialExercises.length === 0) {
+          const { data: exercisesData } = await supabase
+            .from("exercises")
+            .select("*")
+            .order("name")
+          
+          if (exercisesData) {
+            setExercises(exercisesData)
+          }
+        }
+        
         // Recupera anche i video associati agli esercizi per mostrare quale esercizio è associato
-        const { data: exercises } = await supabase
+        const { data: exercisesWithVideo } = await supabase
           .from("exercises")
-          .select("name, video_url")
+          .select("id, name, video_url")
           .not("video_url", "is", null)
 
-        const exerciseVideoMap = new Map<string, string>()
-        exercises?.forEach((ex) => {
+        const exerciseVideoMap = new Map<string, { name: string; id: string }>()
+        exercisesWithVideo?.forEach((ex) => {
           if (ex.video_url) {
-            exerciseVideoMap.set(ex.video_url, ex.name)
+            exerciseVideoMap.set(ex.video_url, { name: ex.name, id: ex.id })
           }
         })
 
-        // Aggiungi il nome dell'esercizio associato se presente
+        // Aggiungi il nome e l'ID dell'esercizio associato se presente
         allVideos.forEach((video) => {
-          const exerciseName = exerciseVideoMap.get(video.url)
-          if (exerciseName) {
-            video.exerciseName = exerciseName
+          const exercise = exerciseVideoMap.get(video.url)
+          if (exercise) {
+            video.exerciseName = exercise.name
+            video.exerciseId = exercise.id
           }
         })
 
@@ -111,7 +144,77 @@ export function VideoGallery() {
     }
 
     fetchVideos()
-  }, [])
+  }, [initialExercises])
+  
+  async function associateVideoToExercise(video: VideoFile, exerciseId: string) {
+    if (!exerciseId) {
+      toast({
+        title: "Errore",
+        description: "Seleziona un esercizio",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setAssociatingVideo(video.path)
+    
+    try {
+      const supabase = createClient()
+      
+      const { error } = await supabase
+        .from("exercises")
+        .update({ video_url: video.url })
+        .eq("id", exerciseId)
+      
+      if (error) throw error
+      
+      // Aggiorna lo stato locale
+      const updatedVideos = videos.map((v) => {
+        if (v.path === video.path) {
+          const exercise = exercises.find((e) => e.id === exerciseId)
+          return {
+            ...v,
+            exerciseName: exercise?.name,
+            exerciseId: exercise?.id,
+          }
+        }
+        return v
+      })
+      setVideos(updatedVideos)
+      
+      // Aggiorna anche la lista esercizi
+      const updatedExercises = exercises.map((e) => {
+        if (e.id === exerciseId) {
+          return { ...e, video_url: video.url }
+        }
+        return e
+      })
+      setExercises(updatedExercises)
+      
+      toast({
+        title: "Successo",
+        description: `Video associato a ${exercises.find((e) => e.id === exerciseId)?.name}`,
+      })
+      
+      setSelectedExerciseId("")
+      setAssociatingVideo(null)
+    } catch (error: any) {
+      console.error("Error associating video:", error)
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile associare il video",
+        variant: "destructive",
+      })
+      setAssociatingVideo(null)
+    }
+  }
+  
+  // Esercizi senza video o con video diverso
+  const availableExercises = exercises.filter((ex) => {
+    if (!ex.video_url) return true
+    // Permetti anche di sostituire il video esistente
+    return true
+  })
 
   const filteredVideos = videos.filter((video) => {
     const query = searchQuery.toLowerCase()
@@ -200,7 +303,7 @@ export function VideoGallery() {
                             )}
                           </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-2">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button
@@ -243,6 +346,49 @@ export function VideoGallery() {
                               </div>
                             </DialogContent>
                           </Dialog>
+                          
+                          {!video.exerciseName && (
+                            <div className="space-y-2">
+                              <Select
+                                value={selectedExerciseId}
+                                onValueChange={setSelectedExerciseId}
+                                disabled={associatingVideo === video.path}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Associa a esercizio..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableExercises.map((ex) => (
+                                    <SelectItem key={ex.id} value={ex.id}>
+                                      {ex.name} {ex.video_url && "(sostituisci)"}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                variant="secondary"
+                                className="w-full gap-2"
+                                onClick={() => associateVideoToExercise(video, selectedExerciseId)}
+                                disabled={!selectedExerciseId || associatingVideo === video.path}
+                              >
+                                {associatingVideo === video.path ? (
+                                  <>Caricamento...</>
+                                ) : (
+                                  <>
+                                    <Link2 className="h-4 w-4" />
+                                    Associa Video
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                          
+                          {video.exerciseName && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span>Associato a: {video.exerciseName}</span>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}

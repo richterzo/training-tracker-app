@@ -77,7 +77,7 @@ export default async function ExercisesPage() {
           <ExerciseLibrary exercises={exercises || []} />
         </TabsContent>
         <TabsContent value="videos" className="mt-6">
-          <VideoGallery />
+          <VideoGallery exercises={exercises || []} />
         </TabsContent>
         <TabsContent value="templates" className="mt-6">
           <TemplatesList templates={templates || []} />
