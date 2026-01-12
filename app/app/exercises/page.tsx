@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ExerciseLibrary } from "@/components/exercises/exercise-library"
+import { VideoGallery } from "@/components/exercises/video-gallery"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TemplatesList } from "@/components/exercises/templates-list"
 
 export const metadata = {
@@ -67,12 +68,16 @@ export default async function ExercisesPage() {
       </div>
 
       <Tabs defaultValue="exercises" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="videos">Video Gallery</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
         <TabsContent value="exercises" className="mt-6">
           <ExerciseLibrary exercises={exercises || []} />
+        </TabsContent>
+        <TabsContent value="videos" className="mt-6">
+          <VideoGallery />
         </TabsContent>
         <TabsContent value="templates" className="mt-6">
           <TemplatesList templates={templates || []} />
