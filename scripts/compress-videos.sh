@@ -60,8 +60,8 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= rea
         echo "[$COUNT/$TOTAL - ${PERCENTAGE}%] 📤 Comprimo: $(basename "$video") (${ORIGINAL_SIZE_MB}MB)..." | tee -a "$LOG_FILE"
         
         # Comprimi con ffmpeg (usa percorsi tra virgolette)
-        # Aggiungi timeout e gestione errori migliore
-        timeout 600 ffmpeg -i "$video" \
+        # Gestione errori migliorata (timeout non disponibile su macOS di default)
+        ffmpeg -i "$video" \
             -c:v libx264 \
             -crf $CRF \
             -preset medium \
@@ -72,12 +72,9 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= rea
             "$OUTPUT_PATH" > /tmp/ffmpeg_$$.log 2>&1
         
         FFMPEG_EXIT=$?
-        if [ $FFMPEG_EXIT -eq 124 ]; then
-            echo "   ⚠️  Timeout (10 minuti) per: $(basename "$video")" | tee -a "$LOG_FILE"
-            rm -f "$OUTPUT_PATH"
-        elif [ $FFMPEG_EXIT -ne 0 ]; then
+        if [ $FFMPEG_EXIT -ne 0 ]; then
             echo "   ❌ Errore ffmpeg per: $(basename "$video")" | tee -a "$LOG_FILE"
-            tail -3 /tmp/ffmpeg_$$.log | tee -a "$LOG_FILE"
+            tail -5 /tmp/ffmpeg_$$.log | tee -a "$LOG_FILE"
             rm -f "$OUTPUT_PATH"
         else
             # Verifica dimensione compressa
