@@ -28,9 +28,11 @@ next-env.d.ts
 
 # Video files - store in Supabase Storage, NOT in Git
 Basic course/
+"Basic course "/
 *.m4v
 *.mp4
 *.mov
 *.avi
 *.webm
 *.mkv
+*.pdf
