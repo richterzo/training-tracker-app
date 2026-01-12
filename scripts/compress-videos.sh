@@ -52,32 +52,48 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= rea
     else
         echo "[$COUNT/$TOTAL] 📤 Comprimo: $(basename "$video") (${ORIGINAL_SIZE_MB}MB)..."
         
-        # Comprimi con ffmpeg (usa percorsi tra virgolette)
-        ffmpeg -i "$video" \
-            -c:v libx264 \
-            -crf $CRF \
-            -preset slow \
-            -c:a aac \
-            -b:a 128k \
-            -movflags +faststart \
-            -y \
-            "$OUTPUT_PATH" 2>&1 | grep -E "(Duration|time=|error)" || true
+               # Comprimi con ffmpeg (usa percorsi tra virgolette)
+               # Aggiungi timeout e gestione errori migliore
+               timeout 600 ffmpeg -i "$video" \
+                   -c:v libx264 \
+                   -crf $CRF \
+                   -preset medium \
+                   -c:a aac \
+                   -b:a 128k \
+                   -movflags +faststart \
+                   -y \
+                   "$OUTPUT_PATH" > /tmp/ffmpeg_$$.log 2>&1
+               
+               FFMPEG_EXIT=$?
+               if [ $FFMPEG_EXIT -eq 124 ]; then
+                   echo "   ⚠️  Timeout (10 minuti) per: $(basename "$video")" | tee -a "$LOG_FILE"
+                   rm -f "$OUTPUT_PATH"
+               elif [ $FFMPEG_EXIT -ne 0 ]; then
+                   echo "   ❌ Errore ffmpeg per: $(basename "$video")" | tee -a "$LOG_FILE"
+                   tail -3 /tmp/ffmpeg_$$.log | tee -a "$LOG_FILE"
+                   rm -f "$OUTPUT_PATH"
+               fi
+               rm -f /tmp/ffmpeg_$$.log
         
         # Verifica dimensione compressa
-        if [ -f "$OUTPUT_PATH" ]; then
-            COMPRESSED_SIZE=$(stat -f%z "$OUTPUT_PATH" 2>/dev/null || stat -c%s "$OUTPUT_PATH" 2>/dev/null)
-            COMPRESSED_SIZE_MB=$((COMPRESSED_SIZE / 1024 / 1024))
-            REDUCTION=$((100 - (COMPRESSED_SIZE * 100 / ORIGINAL_SIZE)))
-            echo "   ✅ Completato: ${COMPRESSED_SIZE_MB}MB (riduzione: ${REDUCTION}%)"
-        else
-            echo "   ❌ Errore nella compressione"
-        fi
-    fi
-done
+           if [ -f "$OUTPUT_PATH" ]; then
+                   COMPRESSED_SIZE=$(stat -f%z "$OUTPUT_PATH" 2>/dev/null || stat -c%s "$OUTPUT_PATH" 2>/dev/null)
+                   COMPRESSED_SIZE_MB=$((COMPRESSED_SIZE / 1024 / 1024))
+                   REDUCTION=$((100 - (COMPRESSED_SIZE * 100 / ORIGINAL_SIZE)))
+                   PERCENTAGE=$((COUNT * 100 / TOTAL))
+                   echo "[$COUNT/$TOTAL - ${PERCENTAGE}%] ✅ Completato: ${COMPRESSED_SIZE_MB}MB (riduzione: ${REDUCTION}%)" | tee -a "$LOG_FILE"
+               else
+                   echo "[$COUNT/$TOTAL] ❌ Errore nella compressione: $(basename "$video")" | tee -a "$LOG_FILE"
+               fi
+           else
+               PERCENTAGE=$((COUNT * 100 / TOTAL))
+               echo "[$COUNT/$TOTAL - ${PERCENTAGE}%] ✅ Già sotto ${TARGET_SIZE_MB}MB: $(basename "$video") (${ORIGINAL_SIZE_MB}MB)" | tee -a "$LOG_FILE"
+           fi
+       done
 
-echo ""
-echo "🏁 Compressione completata!"
-echo "📁 Video compressi in: $OUTPUT_DIR"
-echo ""
-echo "📝 Prossimo passo:"
-echo "   node scripts/upload-exercise-videos.cjs '$OUTPUT_DIR'"
+echo "" | tee -a "$LOG_FILE"
+echo "🏁 Compressione completata!" | tee -a "$LOG_FILE"
+echo "📁 Video compressi in: $OUTPUT_DIR" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+echo "📝 Prossimo passo:" | tee -a "$LOG_FILE"
+echo "   node scripts/upload-exercise-videos.cjs '$OUTPUT_DIR'" | tee -a "$LOG_FILE"
