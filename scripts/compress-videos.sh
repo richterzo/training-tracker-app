@@ -38,15 +38,21 @@ COUNT=0
 echo "📊 Totale video da processare: $TOTAL" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
+# Salta i file già compressi per riprendere da dove si è fermato
 find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= read -r video; do
-    COUNT=$((COUNT + 1))
-    PERCENTAGE=$((COUNT * 100 / TOTAL))
-    
     # Rimuovi il prefisso della directory sorgente (gestendo spazi)
     RELATIVE_PATH="${video#${SOURCE_DIR}/}"
     OUTPUT_PATH="$OUTPUT_DIR/$RELATIVE_PATH"
-    OUTPUT_DIR_PATH=$(dirname "$OUTPUT_PATH")
     
+    # Salta se già compresso
+    if [ -f "$OUTPUT_PATH" ]; then
+        continue
+    fi
+    
+    COUNT=$((COUNT + 1))
+    PERCENTAGE=$((COUNT * 100 / TOTAL))
+    
+    OUTPUT_DIR_PATH=$(dirname "$OUTPUT_PATH")
     mkdir -p "$OUTPUT_DIR_PATH"
     
     # Verifica dimensione originale
@@ -60,14 +66,15 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= rea
         echo "[$COUNT/$TOTAL - ${PERCENTAGE}%] 📤 Comprimo: $(basename "$video") (${ORIGINAL_SIZE_MB}MB)..." | tee -a "$LOG_FILE"
         
         # Comprimi con ffmpeg (usa percorsi tra virgolette)
-        # Gestione errori migliorata (timeout non disponibile su macOS di default)
+        # Usa preset 'fast' per velocità massima (puoi cambiare a 'medium' se preferisci qualità)
         ffmpeg -i "$video" \
             -c:v libx264 \
             -crf $CRF \
-            -preset medium \
+            -preset fast \
             -c:a aac \
             -b:a 128k \
             -movflags +faststart \
+            -threads 0 \
             -y \
             "$OUTPUT_PATH" > /tmp/ffmpeg_$$.log 2>&1
         
