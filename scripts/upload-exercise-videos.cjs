@@ -13,7 +13,24 @@
 const { createClient } = require('@supabase/supabase-js')
 const fs = require('fs')
 const path = require('path')
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') })
+
+// Read .env.local manually
+function loadEnv() {
+  const envPath = path.join(__dirname, '..', '.env.local')
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8')
+    envContent.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/)
+      if (match) {
+        const key = match[1].trim()
+        const value = match[2].trim().replace(/^["']|["']$/g, '')
+        process.env[key] = value
+      }
+    })
+  }
+}
+
+loadEnv()
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -181,14 +198,21 @@ async function processVideosFolder(folderPath) {
   console.log(`📁 Processando cartella: ${folderPath}`)
   
   // Get group_id from first user (or you can specify it)
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profileError } = await supabase
     .from('user_profiles')
     .select('group_id')
     .not('group_id', 'is', null)
     .limit(1)
   
+  if (profileError) {
+    console.error('❌ Errore nel recupero profili:', profileError.message)
+    console.error('💡 Assicurati di avere SUPABASE_SERVICE_ROLE_KEY in .env.local')
+    return
+  }
+  
   if (!profiles || profiles.length === 0) {
     console.error('❌ Nessun gruppo trovato nel database')
+    console.error('💡 Crea prima un utente e un gruppo tramite onboarding')
     return
   }
   
