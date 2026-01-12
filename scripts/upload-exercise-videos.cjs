@@ -98,6 +98,26 @@ const FOLDER_TO_EXERCISE_MAP = {
   '5. close pull ups': 'Pull-ups',
   '5 close pull ups with retraction': 'Pull-ups',
   '5 close pull ups': 'Pull-ups',
+  // Chin-ups mapping (close pull ups with underhand = chin-ups)
+  '5. close pull ups': 'Chin-ups',
+  '5 close pull ups': 'Chin-ups',
+  'close pull ups': 'Chin-ups',
+  'chin up': 'Chin-ups',
+  'chin ups': 'Chin-ups',
+  'chin-up': 'Chin-ups',
+  'chin-ups': 'Chin-ups',
+  // Negative Pull-ups
+  'negative pull up': 'Negative Pull-ups',
+  'negative pull ups': 'Negative Pull-ups',
+  'negative pull-up': 'Negative Pull-ups',
+  'negative pull-ups': 'Negative Pull-ups',
+  'slow negative': 'Negative Pull-ups',
+  'slow negatives': 'Negative Pull-ups',
+  // L-sit Pull-ups
+  'l-sit pull up': 'L-sit Pull-ups',
+  'l-sit pull ups': 'L-sit Pull-ups',
+  'l sit pull up': 'L-sit Pull-ups',
+  'l sit pull ups': 'L-sit Pull-ups',
   '6. lever rises and shrugs': 'Lever Rises',
   '6 lever rises and shrugs': 'Lever Rises',
   '7. typewriter': 'Typewriter Pull-ups',
@@ -110,16 +130,32 @@ const FOLDER_TO_EXERCISE_MAP = {
   '2. legs rises': 'Leg Raises',
   '2 legs rises (floor)': 'Leg Raises',
   '2 legs rises': 'Leg Raises',
+  'legs rise': 'Leg Raises',
+  'leg rises': 'Leg Raises',
+  'leg raise': 'Leg Raises',
+  'leg raises': 'Leg Raises',
   '3. legs rises (high bar)': 'Leg Raises',
   '3 legs rises (high bar)': 'Leg Raises',
   '4. plank': 'Plank',
   '4 plank': 'Plank',
-  '5. hollow hold': 'Hollow Hold',
-  '5 hollow hold': 'Hollow Hold',
+  'plank': 'Plank',
+  '5. hollow hold': 'Hollow Body Hold',
+  '5 hollow hold': 'Hollow Body Hold',
+  'hollow hold': 'Hollow Body Hold',
+  'hollow body': 'Hollow Body Hold',
   '6. wipers': 'Wipers',
   '6 wipers': 'Wipers',
+  'wipers': 'Wipers',
   '7. side plank': 'Side Plank',
   '7 side plank': 'Side Plank',
+  'side plank': 'Side Plank',
+  // Dragon Flag
+  'dragon flag': 'Dragon Flag',
+  'dragon flags': 'Dragon Flag',
+  // L-sit
+  'l-sit': 'L-sit',
+  'l sit': 'L-sit',
+  'lsit': 'L-sit',
 }
 
 // Trova il nome dell'esercizio basato sulla cartella del video
@@ -189,14 +225,35 @@ function findExerciseFromFolder(videoFilePath) {
       if (partNum === 2) {
         const pullMap = {
           1: 'Australian Pull-ups',
-          2: 'Australian Pull-ups',
+          2: 'Australian Pull-ups', // Potrebbe essere anche Chin-ups se "close"
           3: 'Australian Pull-ups',
           4: 'Pull-ups',
-          5: 'Pull-ups',
+          5: 'Chin-ups', // Close pull ups = Chin-ups
           6: 'Lever Rises',
           7: 'Typewriter Pull-ups'
         }
+        // Verifica se è "close" per Chin-ups
+        if (exNum === 2 && folderName.includes('close')) {
+          return 'Chin-ups'
+        }
+        if (exNum === 5 && folderName.includes('close')) {
+          return 'Chin-ups'
+        }
         if (pullMap[exNum]) return pullMap[exNum]
+      }
+      
+      // Mapping per Part 3 (Core)
+      if (partNum === 3) {
+        const coreMap = {
+          1: 'Crunches',
+          2: 'Leg Raises',
+          3: 'Leg Raises',
+          4: 'Plank',
+          5: 'Hollow Body Hold',
+          6: 'Wipers',
+          7: 'Side Plank'
+        }
+        if (coreMap[exNum]) return coreMap[exNum]
       }
     }
   }
