@@ -42,78 +42,83 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-// Mapping nomi file video -> nomi esercizi basato sulla struttura delle cartelle
-// I video sono organizzati in: Part 1 (Push), Part 2 (Pull), Part 3 (Core), Part 4 (Mobility)
-const VIDEO_TO_EXERCISE_MAP = {
-  // Push exercises (Part 1)
-  'regular push up': 'Push-ups',
-  'regular push ups': 'Push-ups',
-  'pike push': 'Pike Push-ups',
-  'pike push up': 'Pike Push-ups',
-  'wide push': 'Wide Push-ups',
-  'wide push up': 'Wide Push-ups',
-  'diamond push': 'Diamond Push-ups',
-  'diamond push up': 'Diamond Push-ups',
-  'triceps': 'Push-ups',
-  '1.1': 'Pike Push-ups',
-  '1.2': 'Wide Push-ups',
-  '1.3': 'Diamond Push-ups',
-  '1.4': 'Push-ups',
+// Mapping cartelle esercizi -> nomi esercizi nel database
+// Basato sulla struttura: "Part X. Category/Number. Exercise Name/"
+const FOLDER_TO_EXERCISE_MAP = {
+  // Part 1: Pushing Power
+  '1. regular push ups': 'Push-ups',
+  '1. regular push up': 'Push-ups',
+  '2. pike push ups': 'Pike Push-ups',
+  '2. pike push up': 'Pike Push-ups',
+  '3. wide push ups': 'Wide Push-ups',
+  '3. wide push up': 'Wide Push-ups',
+  '4. diamond push ups': 'Diamond Push-ups',
+  '4. diamond push up': 'Diamond Push-ups',
+  '5. dips 1st variation': 'Dips',
+  '5. dips 1st': 'Dips',
+  '6. dips 2nd variation': 'Dips',
+  '6. dips 2nd': 'Dips',
+  '7. triceps extension push ups': 'Triceps Extension Push-ups',
+  '7. triceps extension': 'Triceps Extension Push-ups',
+  '8. typewriter': 'Typewriter Push-ups',
   
-  // Pull exercises (Part 2)
-  'australian pull': 'Australian Pull-ups',
-  'australian pull up': 'Australian Pull-ups',
-  'pull up': 'Pull-ups',
-  'pull ups': 'Pull-ups',
-  'chin up': 'Chin-ups',
-  'chin ups': 'Chin-ups',
-  'trazione': 'Pull-ups',
-  '2.1': 'Australian Pull-ups',
-  '2.2': 'Pull-ups',
-  '2.3': 'Chin-ups',
+  // Part 2: Pulling Strength
+  '1. wide australian pull ups': 'Australian Pull-ups',
+  '1. wide australian pull up': 'Australian Pull-ups',
+  '2. close australian pull ups': 'Australian Pull-ups',
+  '2. close australian pull up': 'Australian Pull-ups',
+  '3. leant australian pull ups': 'Australian Pull-ups',
+  '3. leant australian pull up': 'Australian Pull-ups',
+  '4. wide pull ups': 'Pull-ups',
+  '4. wide pull up': 'Pull-ups',
+  '5. close pull ups with retraction': 'Pull-ups',
+  '5. close pull ups': 'Pull-ups',
+  '6. lever rises and shrugs': 'Lever Rises',
+  '7. typewriter': 'Typewriter Pull-ups',
   
-  // Core exercises (Part 3)
-  'plank': 'Plank',
-  'sit up': 'Sit-ups',
-  'leg raise': 'Leg Raises',
-  '3.1': 'Plank',
-  '3.2': 'Sit-ups',
-  '3.3': 'Leg Raises',
+  // Part 3: Core Strength
+  '1. crunches': 'Crunches',
+  '2. legs rises (floor)': 'Leg Raises',
+  '2. legs rises': 'Leg Raises',
+  '3. legs rises (high bar)': 'Leg Raises',
+  '4. plank': 'Plank',
+  '5. hollow hold': 'Hollow Hold',
+  '6. wipers': 'Wipers',
+  '7. side plank': 'Side Plank',
 }
 
-function findMatchingExercise(videoFilePath, videoFileName) {
-  const lowerName = videoFileName.toLowerCase()
-  const lowerPath = videoFilePath.toLowerCase()
+// Trova il nome dell'esercizio basato sulla cartella del video
+function findExerciseFromFolder(videoFilePath) {
+  const normalizedPath = videoFilePath.toLowerCase()
   
-  // Check if path contains exercise category hints
-  const isPush = lowerPath.includes('pushing') || lowerPath.includes('push')
-  const isPull = lowerPath.includes('pulling') || lowerPath.includes('pull')
-  const isCore = lowerPath.includes('core')
+  // Estrai il nome della cartella padre (es. "1. Regular push ups")
+  const pathParts = normalizedPath.split(path.sep)
   
-  // Try exact matches first
-  for (const [key, exerciseName] of Object.entries(VIDEO_TO_EXERCISE_MAP)) {
-    if (lowerName.includes(key.toLowerCase())) {
-      return exerciseName
-    }
-  }
-  
-  // Try pattern matching for progression codes (e.g., "1.2", "2.3")
-  const progressionMatch = lowerName.match(/(\d+)\.(\d+)/)
-  if (progressionMatch) {
-    const group = parseInt(progressionMatch[1])
-    const level = parseInt(progressionMatch[2])
+  // Cerca nella struttura: Part X/Number. Exercise Name/video.m4v
+  for (let i = pathParts.length - 1; i >= 0; i--) {
+    const folderName = pathParts[i].trim()
     
-    if (group === 1 && isPush) {
-      // Push exercises
-      if (level === 1) return 'Pike Push-ups'
-      if (level === 2) return 'Wide Push-ups'
-      if (level === 3) return 'Diamond Push-ups'
-      if (level === 4) return 'Push-ups'
-    } else if (group === 2 && isPull) {
-      // Pull exercises
-      if (level === 1) return 'Australian Pull-ups'
-      if (level === 2) return 'Pull-ups'
-      if (level === 3) return 'Chin-ups'
+    // Prova match esatto
+    if (FOLDER_TO_EXERCISE_MAP[folderName]) {
+      return FOLDER_TO_EXERCISE_MAP[folderName]
+    }
+    
+    // Prova match parziale (es. "1. regular push ups" -> "1. regular push up")
+    for (const [key, exerciseName] of Object.entries(FOLDER_TO_EXERCISE_MAP)) {
+      if (folderName.includes(key) || key.includes(folderName)) {
+        return exerciseName
+      }
+    }
+    
+    // Match per numero (es. "1." -> "1. regular push ups")
+    const numberMatch = folderName.match(/^(\d+)\./)
+    if (numberMatch) {
+      const num = numberMatch[1]
+      for (const [key, exerciseName] of Object.entries(FOLDER_TO_EXERCISE_MAP)) {
+        if (key.startsWith(`${num}.`)) {
+          return exerciseName
+        }
+      }
     }
   }
   
