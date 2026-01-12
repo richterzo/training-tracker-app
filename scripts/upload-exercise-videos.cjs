@@ -308,25 +308,50 @@ function findExerciseFromFileName(fileName) {
   return null
 }
 
+// Converte nome esercizio in slug (stesso formato delle cartelle storage)
+function exerciseNameToSlug(name) {
+  return name.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo = true) {
   const fileName = path.basename(filePath)
   const fileExt = path.extname(fileName)
   
   // Rinomina il video con il nome dell'esercizio per migliore organizzazione
   let safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-  if (renameVideo) {
-    // Crea nome file più descrittivo: exercise-name-variation.m4v
-    const exerciseSlug = exerciseName.replace(/\s+/g, '-').toLowerCase()
-    const variation = fileName.replace(/^\d+\.\d*\s*/, '').replace(/[^a-zA-Z0-9.-]/g, '-').toLowerCase()
+  if (renameVideo && exerciseName) {
+    // Crea nome file standardizzato: exercise-slug-variation.m4v
+    const exerciseSlug = exerciseNameToSlug(exerciseName)
+    
+    // Estrai la variante dal nome originale (rimuovi numeri iniziali e normalizza)
+    let variation = fileName
+      .replace(/^\d+\.\d*\s*/, '') // Rimuovi "1.2 " all'inizio
+      .replace(/^\d+\.\s*/, '') // Rimuovi "1. " all'inizio
+      .replace(/\.[^.]+$/, '') // Rimuovi estensione
+      .replace(/[^a-zA-Z0-9\s-]/g, ' ') // Sostituisci caratteri speciali con spazio
+      .replace(/\s+/g, '-') // Sostituisci spazi con trattini
+      .toLowerCase()
+      .substring(0, 40) // Limita lunghezza
+    
+    // Se non c'è variante significativa, usa "variation-1", "variation-2", etc.
+    if (!variation || variation.length < 3) {
+      variation = `variation-${Date.now() % 1000}`
+    }
+    
     safeFileName = `${exerciseSlug}-${variation}${fileExt}`
-    // Rimuovi doppi trattini
+    // Rimuovi doppi trattini e normalizza
     safeFileName = safeFileName.replace(/-+/g, '-').replace(/^-|-$/g, '')
   }
   
   // Path: shared/ per video tutorial condivisi, group_id/ per esercizi personalizzati
+  const exerciseSlug = exerciseNameToSlug(exerciseName)
   const storagePath = groupId 
-    ? `${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
-    : `shared/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
+    ? `${groupId}/${exerciseSlug}/${safeFileName}`
+    : `shared/${exerciseSlug}/${safeFileName}`
   
   try {
     const fileStats = fs.statSync(filePath)
