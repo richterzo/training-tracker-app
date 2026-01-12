@@ -39,28 +39,28 @@ function exerciseToSlug(name) {
     .replace(/^-|-$/g, '');
 }
 
-// Mapping nomi esercizi -> slug possibili
-const exerciseSlugMap = {
-  'Push-ups': ['push-ups', 'pushups'],
-  'Pike Push-ups': ['pike-push-ups', 'pike-pushups'],
-  'Wide Push-ups': ['wide-push-ups', 'wide-pushups'],
-  'Diamond Push-ups': ['diamond-push-ups', 'diamond-pushups'],
-  'Dips': ['dips'],
-  'Triceps Extension Push-ups': ['triceps-extension-push-ups'],
-  'Typewriter Push-ups': ['typewriter-push-ups', 'typewriter'],
-  'Australian Pull-ups': ['australian-pull-ups', 'australian-pullups'],
-  'Pull-ups': ['pull-ups', 'pullups'],
-  'Chin-ups': ['chin-ups', 'chinups'],
-  'Negative Pull-ups': ['negative-pull-ups', 'negative-pullups'],
-  'L-sit Pull-ups': ['l-sit-pull-ups', 'lsit-pull-ups'],
-  'Typewriter Pull-ups': ['typewriter-pull-ups', 'typewriter'],
-  'Lever Rises': ['lever-rises'],
-  'Crunches': ['crunches'],
-  'Leg Raises': ['leg-raises', 'legs-rises'],
-  'Plank': ['plank'],
-  'Hollow Body Hold': ['hollow-body-hold', 'hollow-hold'],
-  'Wipers': ['wipers'],
-  'Side Plank': ['side-plank'],
+// Mapping diretto: nome esercizio nel DB -> slug cartella nello storage
+const exerciseToStorageSlug = {
+  'Push-ups': 'push-ups',
+  'Pike Push-ups': 'pike-push-ups',
+  'Wide Push-ups': 'wide-push-ups',
+  'Diamond Push-ups': 'diamond-push-ups',
+  'Dips': 'dips',
+  'Triceps Extension Push-ups': 'triceps-extension-push-ups',
+  'Typewriter Push-ups': 'typewriter-push-ups',
+  'Australian Pull-ups': 'australian-pull-ups',
+  'Pull-ups': 'pull-ups',
+  'Chin-ups': 'chin-ups',
+  'Negative Pull-ups': 'negative-pull-ups',
+  'L-sit Pull-ups': 'l-sit-pull-ups',
+  'Typewriter Pull-ups': 'typewriter-pull-ups',
+  'Lever Rises': 'lever-rises',
+  'Crunches': 'crunches',
+  'Leg Raises': 'leg-raises',
+  'Plank': 'plank',
+  'Hollow Body Hold': 'hollow-body-hold',
+  'Wipers': 'wipers',
+  'Side Plank': 'side-plank',
 };
 
 async function listStorageFolders() {
@@ -131,20 +131,22 @@ async function linkVideosToExercises() {
     const matchingExercises = exercises.filter(ex => {
       if (ex.video_url) return false; // Salta se già ha video
 
+      // Match tramite mapping diretto
+      const expectedSlug = exerciseToStorageSlug[ex.name];
+      if (expectedSlug === folderSlug) return true;
+
+      // Match tramite slug generato
       const exerciseSlug = exerciseToSlug(ex.name);
-      
-      // Match esatto
       if (exerciseSlug === folderSlug) return true;
 
-      // Match tramite mapping
-      const possibleSlugs = exerciseSlugMap[ex.name] || [];
-      if (possibleSlugs.includes(folderSlug)) return true;
-
-      // Match parziale (es. "push-ups" matcha "push-ups-variation")
-      if (folderSlug.includes(exerciseSlug) || exerciseSlug.includes(folderSlug)) {
-        // Verifica che non sia troppo generico
-        const minLength = Math.min(folderSlug.length, exerciseSlug.length);
-        if (minLength >= 5) return true; // Almeno 5 caratteri in comune
+      // Match parziale (solo se abbastanza specifico)
+      if (folderSlug.includes(exerciseSlug) && exerciseSlug.length >= 6) {
+        // Evita match errati (es. "push-ups" non deve matchare "handstand-push-ups")
+        // Verifica che il match sia all'inizio o dopo un trattino
+        const matchIndex = folderSlug.indexOf(exerciseSlug);
+        if (matchIndex === 0 || folderSlug[matchIndex - 1] === '-') {
+          return true;
+        }
       }
 
       return false;
