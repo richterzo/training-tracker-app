@@ -4,10 +4,10 @@
  * Script per caricare video degli esercizi in Supabase Storage
  * 
  * Usage:
- *   node scripts/upload-exercise-videos.js [path-to-videos-folder]
+ *   node scripts/upload-exercise-videos.cjs [path-to-videos-folder]
  * 
  * Esempio:
- *   node scripts/upload-exercise-videos.js "Basic course"
+ *   node scripts/upload-exercise-videos.cjs "Basic course "
  */
 
 const { createClient } = require('@supabase/supabase-js')
@@ -90,8 +90,6 @@ const FOLDER_TO_EXERCISE_MAP = {
 // Trova il nome dell'esercizio basato sulla cartella del video
 function findExerciseFromFolder(videoFilePath) {
   const normalizedPath = videoFilePath.toLowerCase()
-  
-  // Estrai il nome della cartella padre (es. "1. Regular push ups")
   const pathParts = normalizedPath.split(path.sep)
   
   // Cerca nella struttura: Part X/Number. Exercise Name/video.m4v
@@ -128,15 +126,12 @@ function findExerciseFromFolder(videoFilePath) {
 async function uploadVideo(filePath, exerciseName, groupId) {
   const fileName = path.basename(filePath)
   const fileExt = path.extname(fileName)
-  // Use original filename to preserve uniqueness (multiple videos per exercise possible)
   const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
   const storagePath = `exercise-videos/${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
   
   try {
     const fileBuffer = fs.readFileSync(filePath)
     const fileSizeMB = (fileBuffer.length / (1024 * 1024)).toFixed(2)
-    
-    console.log(`📤 Uploading ${fileName} (${fileSizeMB} MB)...`)
     
     // Upload to storage
     const { data, error } = await supabase.storage
@@ -147,7 +142,7 @@ async function uploadVideo(filePath, exerciseName, groupId) {
       })
     
     if (error) {
-      console.error(`❌ Errore upload ${fileName}:`, error.message)
+      console.error(`   ❌ Errore upload ${fileName}:`, error.message)
       return null
     }
     
@@ -156,42 +151,11 @@ async function uploadVideo(filePath, exerciseName, groupId) {
       .from('exercise-videos')
       .getPublicUrl(storagePath)
     
-    console.log(`✅ Uploaded: ${fileName} -> ${exerciseName}`)
     return publicUrl
   } catch (err) {
-    console.error(`❌ Errore processando ${fileName}:`, err.message)
+    console.error(`   ❌ Errore processando ${fileName}:`, err.message)
     return null
   }
-}
-
-async function updateExerciseVideoUrl(exerciseName, videoUrl, groupId) {
-  // Check if exercise exists
-  const { data: existing } = await supabase
-    .from('exercises')
-    .select('id, video_url')
-    .eq('group_id', groupId)
-    .eq('name', exerciseName)
-    .limit(1)
-  
-  if (!existing || existing.length === 0) {
-    console.log(`⚠️  Esercizio non trovato: ${exerciseName} (crea l'esercizio prima)`)
-    return false
-  }
-  
-  // Update video_url (append if multiple videos, or replace)
-  const { error } = await supabase
-    .from('exercises')
-    .update({ video_url: videoUrl })
-    .eq('group_id', groupId)
-    .eq('name', exerciseName)
-  
-  if (error) {
-    console.error(`❌ Errore aggiornamento ${exerciseName}:`, error.message)
-    return false
-  }
-  
-  console.log(`✅ Aggiornato video_url per: ${exerciseName}`)
-  return true
 }
 
 async function processVideosFolder(folderPath) {
@@ -200,9 +164,9 @@ async function processVideosFolder(folderPath) {
     return
   }
   
-  console.log(`📁 Processando cartella: ${folderPath}`)
+  console.log(`📁 Processando cartella: ${folderPath}\n`)
   
-  // Get group_id from first user (or you can specify it)
+  // Get group_id from first user
   const { data: profiles, error: profileError } = await supabase
     .from('user_profiles')
     .select('group_id')
@@ -222,53 +186,101 @@ async function processVideosFolder(folderPath) {
   }
   
   const groupId = profiles[0].group_id
-  console.log(`📋 Usando group_id: ${groupId}`)
+  console.log(`📋 Usando group_id: ${groupId}\n`)
   
-  // Find all video files
-  const videoFiles = []
-  function findVideos(dir) {
-    const files = fs.readdirSync(dir)
-    for (const file of files) {
+  // Raggruppa i video per esercizio
+  const exerciseVideos = new Map() // exerciseName -> [{filePath, fileName, isMain}]
+  
+  function walkSync(dir, fileList = []) {
+    fs.readdirSync(dir).forEach(file => {
       const filePath = path.join(dir, file)
-      const stat = fs.statSync(filePath)
-      if (stat.isDirectory()) {
-        findVideos(filePath)
-      } else if (/\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(file)) {
-        videoFiles.push(filePath)
+      if (fs.statSync(filePath).isDirectory()) {
+        walkSync(filePath, fileList)
+      } else if (/\.(m4v|mp4|mov|avi|webm|mkv)$/i.test(file)) {
+        fileList.push(filePath)
+      }
+    })
+    return fileList
+  }
+  
+  const allVideoFiles = walkSync(folderPath)
+  console.log(`📹 Trovati ${allVideoFiles.length} file video\n`)
+  
+  // Prima passata: trova tutti gli esercizi e raggruppa i video
+  for (const filePath of allVideoFiles) {
+    const fileName = path.basename(filePath, path.extname(filePath))
+    const exerciseName = findExerciseFromFolder(filePath)
+    
+    if (exerciseName) {
+      if (!exerciseVideos.has(exerciseName)) {
+        exerciseVideos.set(exerciseName, [])
+      }
+      
+      // Determina se è il video principale (es. "1.2 regular" o "2.2 regular" sono i principali)
+      const isMain = /(regular|2\.|2\s)/i.test(fileName) && !/(incline|decline|slow|pause|negative)/i.test(fileName)
+      
+      exerciseVideos.get(exerciseName).push({
+        filePath,
+        fileName: path.basename(filePath),
+        isMain
+      })
+    } else {
+      console.warn(`⚠️  Nessun esercizio trovato per: ${path.basename(filePath)}`)
+    }
+  }
+  
+  console.log(`📊 Trovati ${exerciseVideos.size} esercizi con video\n`)
+  
+  // Seconda passata: carica i video e aggiorna il database
+  for (const [exerciseName, videos] of exerciseVideos.entries()) {
+    console.log(`🎯 Esercizio: ${exerciseName}`)
+    console.log(`   Video trovati: ${videos.length}`)
+    
+    // Ordina: video principale per primo
+    videos.sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1
+      if (!a.isMain && b.isMain) return 1
+      return 0
+    })
+    
+    let mainVideoUrl = null
+    
+    // Carica tutti i video
+    for (const video of videos) {
+      console.log(`   📤 Caricando: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''}...`)
+      const publicUrl = await uploadVideo(video.filePath, exerciseName, groupId)
+      
+      if (publicUrl) {
+        if (video.isMain || !mainVideoUrl) {
+          mainVideoUrl = publicUrl
+        }
+        console.log(`   ✅ Caricato`)
+      }
+    }
+    
+    // Aggiorna il campo video_url con il video principale
+    if (mainVideoUrl) {
+      const { error: updateError } = await supabase
+        .from('exercises')
+        .update({ video_url: mainVideoUrl })
+        .eq('group_id', groupId)
+        .eq('name', exerciseName)
+      
+      if (updateError) {
+        console.error(`   ❌ Errore aggiornamento video_url per ${exerciseName}:`, updateError.message)
+      } else {
+        console.log(`   ✅ Aggiornato video_url principale per "${exerciseName}"`)
+        console.log(`   🔗 Link: ${mainVideoUrl}\n`)
       }
     }
   }
   
-  findVideos(folderPath)
-  console.log(`📹 Trovati ${videoFiles.length} video files`)
-  
-  if (videoFiles.length === 0) {
-    console.log('⚠️  Nessun video trovato nella cartella')
-    return
-  }
-  
-  // Process each video
-  for (const videoPath of videoFiles) {
-    const fileName = path.basename(videoPath)
-    const exerciseName = findMatchingExercise(videoPath, fileName)
-    
-    if (!exerciseName) {
-      console.log(`⚠️  Nessun match per: ${fileName} (salto)`)
-      console.log(`   Path: ${videoPath}`)
-      continue
-    }
-    
-    const videoUrl = await uploadVideo(videoPath, exerciseName, groupId)
-    if (videoUrl) {
-      await updateExerciseVideoUrl(exerciseName, videoUrl, groupId)
-    }
-  }
-  
-  console.log('\n✅ Upload completato!')
+  console.log('\n🏁 Processo di upload completato!')
+  console.log(`✅ ${exerciseVideos.size} esercizi aggiornati con video`)
 }
 
 // Main
-const videosFolder = process.argv[2] || 'Basic course'
-const fullPath = path.join(__dirname, '..', videosFolder)
+const videosFolder = process.argv[2] || 'Basic course '
+const fullPath = path.resolve(process.cwd(), videosFolder)
 
 processVideosFolder(fullPath).catch(console.error)
