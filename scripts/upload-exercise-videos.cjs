@@ -127,7 +127,7 @@ async function uploadVideo(filePath, exerciseName, groupId) {
   const fileName = path.basename(filePath)
   const fileExt = path.extname(fileName)
   const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-  const storagePath = `exercise-videos/${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
+  const storagePath = `${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
   
   try {
     const fileStats = fs.statSync(filePath)
