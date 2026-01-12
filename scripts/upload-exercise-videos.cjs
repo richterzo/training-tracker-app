@@ -267,7 +267,7 @@ function findExerciseFromFolder(videoFilePath) {
   return null
 }
 
-// Helper per trovare esercizio dal nome del file
+  // Helper per trovare esercizio dal nome del file
 function findExerciseFromFileName(fileName) {
   const lowerName = fileName.toLowerCase()
   
@@ -276,13 +276,22 @@ function findExerciseFromFileName(fileName) {
     if (lowerName.includes('diamond')) return 'Diamond Push-ups'
     if (lowerName.includes('wide')) return 'Wide Push-ups'
     if (lowerName.includes('pike')) return 'Pike Push-ups'
+    if (lowerName.includes('triceps') || lowerName.includes('extension')) return 'Triceps Extension Push-ups'
+    if (lowerName.includes('typewriter')) return 'Typewriter Push-ups'
     return 'Push-ups'
   }
   
   if (lowerName.includes('pull up') || lowerName.includes('pullup')) {
-    if (lowerName.includes('australian')) return 'Australian Pull-ups'
-    if (lowerName.includes('chin')) return 'Chin-ups'
-    if (lowerName.includes('negative')) return 'Negative Pull-ups'
+    if (lowerName.includes('australian') || lowerName.includes('incline') || lowerName.includes('decline')) {
+      // Verifica se è "close" per Chin-ups
+      if (lowerName.includes('close')) return 'Chin-ups'
+      return 'Australian Pull-ups'
+    }
+    if (lowerName.includes('chin') || lowerName.includes('close') && lowerName.includes('retraction')) return 'Chin-ups'
+    if (lowerName.includes('negative') || lowerName.includes('slow negative')) return 'Negative Pull-ups'
+    if (lowerName.includes('l-sit') || lowerName.includes('l sit')) return 'L-sit Pull-ups'
+    if (lowerName.includes('typewriter')) return 'Typewriter Pull-ups'
+    if (lowerName.includes('lever') || lowerName.includes('shrug')) return 'Lever Rises'
     return 'Pull-ups'
   }
   
@@ -291,9 +300,10 @@ function findExerciseFromFileName(fileName) {
     if (lowerName.includes('side')) return 'Side Plank'
     return 'Plank'
   }
-  if (lowerName.includes('leg raise') || lowerName.includes('legs rise')) return 'Leg Raises'
+  if (lowerName.includes('leg raise') || lowerName.includes('legs rise') || lowerName.includes('knees')) return 'Leg Raises'
   if (lowerName.includes('hollow')) return 'Hollow Body Hold'
   if (lowerName.includes('wiper')) return 'Wipers'
+  if (lowerName.includes('crunch')) return 'Crunches'
   
   return null
 }
