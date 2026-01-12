@@ -157,6 +157,39 @@ const FOLDER_TO_EXERCISE_MAP = {
   'l-sit': 'L-sit',
   'l sit': 'L-sit',
   'lsit': 'L-sit',
+  
+  // Part 4: Upper body mobility (potrebbero non avere video specifici)
+  // Legs exercises
+  'squat': 'Squats',
+  'squats': 'Squats',
+  'jump squat': 'Jump Squats',
+  'jump squats': 'Jump Squats',
+  'lunge': 'Lunges',
+  'lunges': 'Lunges',
+  'pistol squat': 'Pistol Squats',
+  'pistol squats': 'Pistol Squats',
+  'bulgarian split squat': 'Bulgarian Split Squats',
+  'bulgarian split squats': 'Bulgarian Split Squats',
+  'calf raise': 'Calf Raises',
+  'calf raises': 'Calf Raises',
+  
+  // Cardio
+  'burpee': 'Burpees',
+  'burpees': 'Burpees',
+  'high knee': 'High Knees',
+  'high knees': 'High Knees',
+  'jumping jack': 'Jumping Jacks',
+  'jumping jacks': 'Jumping Jacks',
+  'mountain climber': 'Mountain Climbers',
+  'mountain climbers': 'Mountain Climbers',
+  
+  // Skills (potrebbero non avere video nella cartella Basic course)
+  'back lever': 'Back Lever',
+  'front lever': 'Front Lever',
+  'handstand': 'Handstand',
+  'muscle up': 'Muscle-up',
+  'muscle-up': 'Muscle-up',
+  'planche': 'Planche',
 }
 
 // Trova il nome dell'esercizio basato sulla cartella del video
@@ -341,9 +374,32 @@ function findExerciseFromFolderImproved(videoFilePath) {
     { pattern: /^plank$/i, exercise: 'Plank' },
     { pattern: /hollow.*(hold|body)/i, exercise: 'Hollow Body Hold' },
     { pattern: /wiper/i, exercise: 'Wipers' },
+    { pattern: /dragon.*flag/i, exercise: 'Dragon Flag' },
+    { pattern: /^l[- ]?sit$/i, exercise: 'L-sit' },
     
     // Dips
     { pattern: /dip/i, exercise: 'Dips' },
+    
+    // Legs patterns
+    { pattern: /pistol.*squat/i, exercise: 'Pistol Squats' },
+    { pattern: /bulgarian.*split.*squat/i, exercise: 'Bulgarian Split Squats' },
+    { pattern: /jump.*squat/i, exercise: 'Jump Squats' },
+    { pattern: /^squat/i, exercise: 'Squats' },
+    { pattern: /lunge/i, exercise: 'Lunges' },
+    { pattern: /calf.*raise/i, exercise: 'Calf Raises' },
+    
+    // Cardio patterns
+    { pattern: /burpee/i, exercise: 'Burpees' },
+    { pattern: /high.*knee/i, exercise: 'High Knees' },
+    { pattern: /jumping.*jack/i, exercise: 'Jumping Jacks' },
+    { pattern: /mountain.*climber/i, exercise: 'Mountain Climbers' },
+    
+    // Skills patterns (potrebbero non avere video)
+    { pattern: /back.*lever/i, exercise: 'Back Lever' },
+    { pattern: /front.*lever/i, exercise: 'Front Lever' },
+    { pattern: /handstand/i, exercise: 'Handstand' },
+    { pattern: /muscle.*up/i, exercise: 'Muscle-up' },
+    { pattern: /planche/i, exercise: 'Planche' },
   ]
   
   // Cerca nel path completo
