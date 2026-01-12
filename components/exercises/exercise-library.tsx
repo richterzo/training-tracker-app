@@ -11,7 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search } from "lucide-react"
+import { Search, Play } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import type { Database } from "@/lib/types/database"
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
@@ -102,9 +111,37 @@ export function ExerciseLibrary({ exercises }: ExerciseLibraryProps) {
                             </CardDescription>
                           )}
                         </div>
-                        <Badge className={categoryColors[exercise.category]} variant="secondary">
-                          {exercise.category}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {exercise.video_url && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Play className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Video</span>
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                  <DialogTitle>{exercise.name}</DialogTitle>
+                                  <DialogDescription>Tutorial Video</DialogDescription>
+                                </DialogHeader>
+                                <div className="aspect-video w-full overflow-hidden rounded-lg">
+                                  <video
+                                    src={exercise.video_url}
+                                    controls
+                                    className="h-full w-full"
+                                    preload="metadata"
+                                  >
+                                    Your browser does not support the video tag.
+                                  </video>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                          <Badge className={categoryColors[exercise.category]} variant="secondary">
+                            {exercise.category}
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                   </Card>
