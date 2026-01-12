@@ -481,7 +481,7 @@ async function processVideosFolder(folderPath) {
     
     // Processa batch in parallelo
     await Promise.all(batch.map(async ([exerciseName, videos]) => {
-    console.log(`🎯 Esercizio: ${exerciseName}`)
+      console.log(`🎯 Esercizio: ${exerciseName}`)
     console.log(`   Video trovati: ${videos.length}`)
     
     // Ordina: video principale per primo
