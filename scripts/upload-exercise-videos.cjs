@@ -365,7 +365,8 @@ async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo =
       return null
     }
     
-    const fileBuffer = fs.readFileSync(filePath)
+    // Leggi file in modo asincrono (più efficiente per file grandi)
+    const fileBuffer = await fs.promises.readFile(filePath)
     
     // Upload to storage
     const { data, error } = await supabase.storage
@@ -373,6 +374,7 @@ async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo =
       .upload(storagePath, fileBuffer, {
         contentType: fileExt === '.m4v' ? 'video/mp4' : `video/${fileExt.slice(1)}`,
         upsert: true,
+        cacheControl: '3600',
       })
     
     if (error) {
@@ -469,7 +471,15 @@ async function processVideosFolder(folderPath) {
   console.log(`📊 Trovati ${exerciseVideos.size} esercizi con video\n`)
   
   // Seconda passata: carica i video e aggiorna il database
-  for (const [exerciseName, videos] of exerciseVideos.entries()) {
+  // Processa in batch per migliorare le performance
+  const exerciseEntries = Array.from(exerciseVideos.entries())
+  const BATCH_SIZE = 3 // Processa 3 esercizi alla volta
+  
+  for (let i = 0; i < exerciseEntries.length; i += BATCH_SIZE) {
+    const batch = exerciseEntries.slice(i, i + BATCH_SIZE)
+    
+    // Processa batch in parallelo
+    await Promise.all(batch.map(async ([exerciseName, videos]) => {
     console.log(`🎯 Esercizio: ${exerciseName}`)
     console.log(`   Video trovati: ${videos.length}`)
     
@@ -482,16 +492,23 @@ async function processVideosFolder(folderPath) {
     
     let mainVideoUrl = null
     
-    // Carica tutti i video (una volta sola, senza group_id - esercizi trasversali)
-    for (const video of videos) {
-      console.log(`   📤 Caricando: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''}...`)
+    // Carica tutti i video in parallelo (più veloce!)
+    console.log(`   📤 Caricando ${videos.length} video in parallelo...`)
+    const uploadPromises = videos.map(async (video) => {
       const publicUrl = await uploadVideo(video.filePath, exerciseName, null) // null = path condiviso
-      
       if (publicUrl) {
-        if (video.isMain || !mainVideoUrl) {
-          mainVideoUrl = publicUrl
-        }
-        console.log(`   ✅ Caricato`)
+        console.log(`   ✅ Caricato: ${video.fileName}${video.isMain ? ' (PRINCIPALE)' : ''}`)
+        return { publicUrl, isMain: video.isMain }
+      }
+      return null
+    })
+    
+    const uploadResults = await Promise.all(uploadPromises)
+    
+    // Trova il video principale
+    for (const result of uploadResults) {
+      if (result && (result.isMain || !mainVideoUrl)) {
+        mainVideoUrl = result.publicUrl
       }
     }
     
@@ -520,7 +537,9 @@ async function processVideosFolder(folderPath) {
           console.warn(`   💡 Gli esercizi verranno creati quando i gruppi li aggiungeranno\n`)
         }
       }
-    }
+    }))
+    
+    console.log(`\n📊 Progresso: ${Math.min(i + BATCH_SIZE, exerciseEntries.length)} / ${exerciseEntries.length} esercizi processati\n`)
   }
   
   console.log('\n🏁 Processo di upload completato!')
