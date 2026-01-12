@@ -159,9 +159,11 @@ const FOLDER_TO_EXERCISE_MAP = {
 }
 
 // Trova il nome dell'esercizio basato sulla cartella del video
+// Migliorato: matching più intelligente e rinomina video se necessario
 function findExerciseFromFolder(videoFilePath) {
   const normalizedPath = videoFilePath.toLowerCase()
   const pathParts = normalizedPath.split(path.sep)
+  const fileName = path.basename(videoFilePath, path.extname(videoFilePath)).toLowerCase()
   
   // Cerca nella struttura: Part X/Number. Exercise Name/video.m4v
   // Partiamo dalla fine (cartella più specifica)
@@ -258,15 +260,60 @@ function findExerciseFromFolder(videoFilePath) {
     }
   }
   
+  // Ultimo tentativo: cerca nel nome del file stesso
+  const fileMatch = findExerciseFromFileName(fileName)
+  if (fileMatch) return fileMatch
+  
   return null
 }
 
-async function uploadVideo(filePath, exerciseName, groupId = null) {
+// Helper per trovare esercizio dal nome del file
+function findExerciseFromFileName(fileName) {
+  const lowerName = fileName.toLowerCase()
+  
+  // Match diretto per parole chiave comuni
+  if (lowerName.includes('push up') || lowerName.includes('pushup')) {
+    if (lowerName.includes('diamond')) return 'Diamond Push-ups'
+    if (lowerName.includes('wide')) return 'Wide Push-ups'
+    if (lowerName.includes('pike')) return 'Pike Push-ups'
+    return 'Push-ups'
+  }
+  
+  if (lowerName.includes('pull up') || lowerName.includes('pullup')) {
+    if (lowerName.includes('australian')) return 'Australian Pull-ups'
+    if (lowerName.includes('chin')) return 'Chin-ups'
+    if (lowerName.includes('negative')) return 'Negative Pull-ups'
+    return 'Pull-ups'
+  }
+  
+  if (lowerName.includes('dip')) return 'Dips'
+  if (lowerName.includes('plank')) {
+    if (lowerName.includes('side')) return 'Side Plank'
+    return 'Plank'
+  }
+  if (lowerName.includes('leg raise') || lowerName.includes('legs rise')) return 'Leg Raises'
+  if (lowerName.includes('hollow')) return 'Hollow Body Hold'
+  if (lowerName.includes('wiper')) return 'Wipers'
+  
+  return null
+}
+
+async function uploadVideo(filePath, exerciseName, groupId = null, renameVideo = true) {
   const fileName = path.basename(filePath)
   const fileExt = path.extname(fileName)
-  const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-  // Path corretto: exercise-name/video.m4v (senza group_id, esercizi trasversali)
-  // Se groupId è null, usa path globale per esercizi condivisi
+  
+  // Rinomina il video con il nome dell'esercizio per migliore organizzazione
+  let safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
+  if (renameVideo) {
+    // Crea nome file più descrittivo: exercise-name-variation.m4v
+    const exerciseSlug = exerciseName.replace(/\s+/g, '-').toLowerCase()
+    const variation = fileName.replace(/^\d+\.\d*\s*/, '').replace(/[^a-zA-Z0-9.-]/g, '-').toLowerCase()
+    safeFileName = `${exerciseSlug}-${variation}${fileExt}`
+    // Rimuovi doppi trattini
+    safeFileName = safeFileName.replace(/-+/g, '-').replace(/^-|-$/g, '')
+  }
+  
+  // Path: shared/ per video tutorial condivisi, group_id/ per esercizi personalizzati
   const storagePath = groupId 
     ? `${groupId}/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
     : `shared/${exerciseName.replace(/\s+/g, '-').toLowerCase()}/${safeFileName}`
