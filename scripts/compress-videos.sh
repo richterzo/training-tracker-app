@@ -33,9 +33,10 @@ mkdir -p "$OUTPUT_DIR"
 TOTAL=$(find "$SOURCE_DIR" -name "*.m4v" -o -name "*.mp4" | wc -l | tr -d ' ')
 COUNT=0
 
-find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while read -r video; do
+find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= read -r video; do
     COUNT=$((COUNT + 1))
-    RELATIVE_PATH="${video#$SOURCE_DIR/}"
+    # Rimuovi il prefisso della directory sorgente (gestendo spazi)
+    RELATIVE_PATH="${video#${SOURCE_DIR}/}"
     OUTPUT_PATH="$OUTPUT_DIR/$RELATIVE_PATH"
     OUTPUT_DIR_PATH=$(dirname "$OUTPUT_PATH")
     
@@ -51,7 +52,7 @@ find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while read -r 
     else
         echo "[$COUNT/$TOTAL] 📤 Comprimo: $(basename "$video") (${ORIGINAL_SIZE_MB}MB)..."
         
-        # Comprimi con ffmpeg
+        # Comprimi con ffmpeg (usa percorsi tra virgolette)
         ffmpeg -i "$video" \
             -c:v libx264 \
             -crf $CRF \
