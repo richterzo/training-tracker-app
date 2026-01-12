@@ -48,43 +48,78 @@ const FOLDER_TO_EXERCISE_MAP = {
   // Part 1: Pushing Power
   '1. regular push ups': 'Push-ups',
   '1. regular push up': 'Push-ups',
+  '1 regular push ups': 'Push-ups',
+  '1 regular push up': 'Push-ups',
   '2. pike push ups': 'Pike Push-ups',
   '2. pike push up': 'Pike Push-ups',
+  '2 pike push ups': 'Pike Push-ups',
+  '2 pike push up': 'Pike Push-ups',
   '3. wide push ups': 'Wide Push-ups',
   '3. wide push up': 'Wide Push-ups',
+  '3 wide push ups': 'Wide Push-ups',
+  '3 wide push up': 'Wide Push-ups',
   '4. diamond push ups': 'Diamond Push-ups',
   '4. diamond push up': 'Diamond Push-ups',
+  '4 diamond push ups': 'Diamond Push-ups',
+  '4 diamond push up': 'Diamond Push-ups',
   '5. dips 1st variation': 'Dips',
   '5. dips 1st': 'Dips',
+  '5 dips 1st variation': 'Dips',
+  '5 dips 1st': 'Dips',
   '6. dips 2nd variation': 'Dips',
   '6. dips 2nd': 'Dips',
+  '6 dips 2nd variation': 'Dips',
+  '6 dips 2nd': 'Dips',
   '7. triceps extension push ups': 'Triceps Extension Push-ups',
   '7. triceps extension': 'Triceps Extension Push-ups',
+  '7 triceps extension push ups': 'Triceps Extension Push-ups',
+  '7 triceps extension': 'Triceps Extension Push-ups',
   '8. typewriter': 'Typewriter Push-ups',
+  '8 typewriter': 'Typewriter Push-ups',
   
   // Part 2: Pulling Strength
   '1. wide australian pull ups': 'Australian Pull-ups',
   '1. wide australian pull up': 'Australian Pull-ups',
+  '1 wide australian pull ups': 'Australian Pull-ups',
+  '1 wide australian pull up': 'Australian Pull-ups',
   '2. close australian pull ups': 'Australian Pull-ups',
   '2. close australian pull up': 'Australian Pull-ups',
+  '2 close australian pull ups': 'Australian Pull-ups',
+  '2 close australian pull up': 'Australian Pull-ups',
   '3. leant australian pull ups': 'Australian Pull-ups',
   '3. leant australian pull up': 'Australian Pull-ups',
+  '3 leant australian pull ups': 'Australian Pull-ups',
+  '3 leant australian pull up': 'Australian Pull-ups',
   '4. wide pull ups': 'Pull-ups',
   '4. wide pull up': 'Pull-ups',
+  '4 wide pull ups': 'Pull-ups',
+  '4 wide pull up': 'Pull-ups',
   '5. close pull ups with retraction': 'Pull-ups',
   '5. close pull ups': 'Pull-ups',
+  '5 close pull ups with retraction': 'Pull-ups',
+  '5 close pull ups': 'Pull-ups',
   '6. lever rises and shrugs': 'Lever Rises',
+  '6 lever rises and shrugs': 'Lever Rises',
   '7. typewriter': 'Typewriter Pull-ups',
+  '7 typewriter': 'Typewriter Pull-ups',
   
   // Part 3: Core Strength
   '1. crunches': 'Crunches',
+  '1 crunches': 'Crunches',
   '2. legs rises (floor)': 'Leg Raises',
   '2. legs rises': 'Leg Raises',
+  '2 legs rises (floor)': 'Leg Raises',
+  '2 legs rises': 'Leg Raises',
   '3. legs rises (high bar)': 'Leg Raises',
+  '3 legs rises (high bar)': 'Leg Raises',
   '4. plank': 'Plank',
+  '4 plank': 'Plank',
   '5. hollow hold': 'Hollow Hold',
+  '5 hollow hold': 'Hollow Hold',
   '6. wipers': 'Wipers',
+  '6 wipers': 'Wipers',
   '7. side plank': 'Side Plank',
+  '7 side plank': 'Side Plank',
 }
 
 // Trova il nome dell'esercizio basato sulla cartella del video
@@ -93,29 +128,75 @@ function findExerciseFromFolder(videoFilePath) {
   const pathParts = normalizedPath.split(path.sep)
   
   // Cerca nella struttura: Part X/Number. Exercise Name/video.m4v
+  // Partiamo dalla fine (cartella più specifica)
   for (let i = pathParts.length - 1; i >= 0; i--) {
-    const folderName = pathParts[i].trim()
+    let folderName = pathParts[i].trim()
     
-    // Prova match esatto
+    // Rimuovi estensioni se presenti
+    folderName = folderName.replace(/\.(m4v|mp4|mov|avi|webm|mkv)$/i, '')
+    
+    // Prova match esatto (più preciso)
     if (FOLDER_TO_EXERCISE_MAP[folderName]) {
       return FOLDER_TO_EXERCISE_MAP[folderName]
     }
     
-    // Prova match parziale (es. "1. regular push ups" -> "1. regular push up")
+    // Prova match senza punto dopo il numero (es. "1 regular push ups")
+    const withoutDot = folderName.replace(/^(\d+)\./, '$1 ')
+    if (FOLDER_TO_EXERCISE_MAP[withoutDot]) {
+      return FOLDER_TO_EXERCISE_MAP[withoutDot]
+    }
+    
+    // Prova match parziale più specifico (deve contenere parole chiave)
     for (const [key, exerciseName] of Object.entries(FOLDER_TO_EXERCISE_MAP)) {
-      if (folderName.includes(key) || key.includes(folderName)) {
+      // Match più preciso: la cartella deve contenere le parole chiave
+      const keyWords = key.split(/\s+/).filter(w => w.length > 2)
+      const folderWords = folderName.split(/\s+/)
+      
+      // Se almeno 2 parole chiave corrispondono
+      const matches = keyWords.filter(kw => 
+        folderWords.some(fw => fw.includes(kw) || kw.includes(fw))
+      )
+      
+      if (matches.length >= 2) {
         return exerciseName
       }
     }
     
-    // Match per numero (es. "1." -> "1. regular push ups")
-    const numberMatch = folderName.match(/^(\d+)\./)
-    if (numberMatch) {
-      const num = numberMatch[1]
-      for (const [key, exerciseName] of Object.entries(FOLDER_TO_EXERCISE_MAP)) {
-        if (key.startsWith(`${num}.`)) {
-          return exerciseName
+    // Match per numero come fallback (solo se siamo in Part 1 o Part 2)
+    const partMatch = normalizedPath.match(/part\s*(\d+)/)
+    const numberMatch = folderName.match(/^(\d+)[\.\s]/)
+    
+    if (partMatch && numberMatch) {
+      const partNum = parseInt(partMatch[1])
+      const exNum = parseInt(numberMatch[1])
+      
+      // Mapping diretto per Part 1 (Push)
+      if (partNum === 1) {
+        const pushMap = {
+          1: 'Push-ups',
+          2: 'Pike Push-ups',
+          3: 'Wide Push-ups',
+          4: 'Diamond Push-ups',
+          5: 'Dips',
+          6: 'Dips',
+          7: 'Triceps Extension Push-ups',
+          8: 'Typewriter Push-ups'
         }
+        if (pushMap[exNum]) return pushMap[exNum]
+      }
+      
+      // Mapping diretto per Part 2 (Pull)
+      if (partNum === 2) {
+        const pullMap = {
+          1: 'Australian Pull-ups',
+          2: 'Australian Pull-ups',
+          3: 'Australian Pull-ups',
+          4: 'Pull-ups',
+          5: 'Pull-ups',
+          6: 'Lever Rises',
+          7: 'Typewriter Pull-ups'
+        }
+        if (pullMap[exNum]) return pullMap[exNum]
       }
     }
   }
