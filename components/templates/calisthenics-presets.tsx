@@ -124,10 +124,8 @@ export function CalisthenicsPresets({ groupId, userId }: CalisthenicsPresetsProp
       }
 
       setSuccess(`Template "${preset.name}" created successfully!`)
-      if (onTemplateCreated) {
-        onTemplateCreated()
-      }
       setTimeout(() => {
+        router.push("/app/exercises")
         router.refresh()
       }, 1000)
     } catch (err: any) {
