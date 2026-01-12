@@ -31,15 +31,16 @@ echo ""
 # Crea directory output mantenendo la struttura
 mkdir -p "$OUTPUT_DIR"
 
-# Conta i file
-TOTAL=$(find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | wc -l | tr -d ' ')
+# Conta i file (escludi cartelle duplicate/malformate)
+TOTAL=$(find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) ! -path "*/asic course */*" ! -path "*/c course */*" ! -path "*/sic course */*" ! -path "*/ic course */*" | wc -l | tr -d ' ')
 COUNT=0
 
 echo "📊 Totale video da processare: $TOTAL" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 # Salta i file già compressi per riprendere da dove si è fermato
-find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) | while IFS= read -r video; do
+# Escludi cartelle duplicate/malformate
+find "$SOURCE_DIR" -type f \( -name "*.m4v" -o -name "*.mp4" \) ! -path "*/asic course */*" ! -path "*/c course */*" ! -path "*/sic course */*" ! -path "*/ic course */*" | while IFS= read -r video; do
     # Rimuovi il prefisso della directory sorgente (gestendo spazi)
     RELATIVE_PATH="${video#${SOURCE_DIR}/}"
     OUTPUT_PATH="$OUTPUT_DIR/$RELATIVE_PATH"
