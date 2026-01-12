@@ -24,10 +24,9 @@ interface Preset {
 interface CalisthenicsPresetsProps {
   groupId: string
   userId: string
-  onTemplateCreated?: () => void
 }
 
-export function CalisthenicsPresets({ groupId, userId, onTemplateCreated }: CalisthenicsPresetsProps) {
+export function CalisthenicsPresets({ groupId, userId }: CalisthenicsPresetsProps) {
   const router = useRouter()
   const [presets, setPresets] = useState<Preset[]>([])
   const [loading, setLoading] = useState(true)

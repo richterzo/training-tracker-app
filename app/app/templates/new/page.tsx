@@ -62,9 +62,6 @@ export default async function NewTemplatePage() {
           <CalisthenicsPresets
             groupId={profile.group_id}
             userId={user.id}
-            onTemplateCreated={() => {
-              // Template created
-            }}
           />
         </TabsContent>
 
