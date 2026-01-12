@@ -114,5 +114,26 @@ BEGIN
     );
   END LOOP;
 
+  -- Add participant "Gon Freecs" if exists
+  DECLARE
+    gon_user_id UUID;
+  BEGIN
+    SELECT up.id INTO gon_user_id
+    FROM user_profiles up
+    JOIN auth.users au ON au.id = up.id
+    WHERE (up.display_name ILIKE '%gon%' OR up.full_name ILIKE '%gon%' OR au.email ILIKE '%gon%')
+      AND up.group_id = target_group_id
+    LIMIT 1;
+
+    IF gon_user_id IS NOT NULL THEN
+      INSERT INTO workout_participants (planned_workout_id, user_id, status)
+      VALUES (workout_id, gon_user_id, 'confirmed')
+      ON CONFLICT (planned_workout_id, user_id) DO NOTHING;
+      RAISE NOTICE 'Added participant: Gon Freecs (%)', gon_user_id;
+    ELSE
+      RAISE NOTICE 'Gon Freecs not found in group, skipping participant';
+    END IF;
+  END;
+
   RAISE NOTICE '✅ Workout created successfully with % exercises', array_length(exercise_ids, 1);
 END $$;
